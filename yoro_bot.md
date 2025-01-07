@@ -1,4 +1,4 @@
-<img src="/images/yoro_bot_400x400.png" alt="yoro_bot icon image" width="200" height="200" style="border-radius:50%" />
+<img src="/images/yoro_bot_400x400.png" alt="yoro_bot icon image" width="100" height="100" />
 
 ### 更新履歴
 
@@ -184,8 +184,8 @@ function sendNewYearTweet() {
   const numlist = [29, 602];
   for (const num of numlist) {
     // num starts from 1, arrayindex from 0
-    var selectedRow = range.getValues()[num - 1];
-    var nextCount = selectedRow[1] + 1;
+    const selectedRow = range.getValues()[num - 1];
+    const nextCount = selectedRow[1] + 1;
     sheet.getRange("B" + num).setValue(nextCount);
 
     sendTweet(selectedRow[0]);
