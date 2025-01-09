@@ -2,6 +2,7 @@
 
 ### 更新履歴
 
+- 2025/01/09 ー botのつくり方を追記
 - 2025/01/06 ー GitHubPagesにこのページを作成
 - 2024/12/22 ー GoogleAppsScriptに移植して稼働再開
 - 2016/01/23 ー follower数が1000人を超えました（しばらく前に）
@@ -39,67 +40,110 @@
 |済|『を読む』|『からだを読む』|
 |未|『身体観』|『日本人の身体観の歴史』|
 
+### botのつくり方
+
+1. Googleスプレッドシートを作成する。
+   - A列：140文字以内のツイート本文
+   - B列：ツイート回数の記録、初期値はゼロ
+   - C列：1から通し番号を振る
+   - D列：LEN(A#)
+3. 「拡張機能」からAppsScriptを作成する。
+   - 「ライブラリを追加」からOAuth2ライブラリを追加
+     - 1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF
+   - 「プロジェクトの設定」からスクリプトIDを覚えておく。
+4. TwitterDeveloperPortalでAppを作成する。
+   - 「User authentication settings」の「Callback URI / Redirect URL」の欄に上で覚えたIDを含むURLを入力する。
+     - https://script.google.com/macros/d/スクリプトID/usercallback
+   - 「Keys and tokens」から「Client ID」と「Client Secret」を保存する。
+5. AppsScriptの「エディタ」に以下の`コード.gs`をコピーして貼り付ける。
+6. 「プロジェクトの設定」の「スクリプトプロパティの追加」から、保存した値を設定する。
+   - CLIENT_ID
+   - CLIENT_SECRET
+7. 「エディタ」から`initialSetUp`関数を選択し「実行」する。
+8. 「トリガー」から必要なトリガーを追加する。
+   - 30分おきのトリガーで`drawLots(48)`だと一日一ツイート平均となる。
+
 ### コード.gs
 
 ```javascript
-const CLIENT_ID = '<Client ID>'
-const CLIENT_SECRET = '<Client Secret>'
+function initialSetUp() {
+  const sp = PropertiesService.getScriptProperties();
+  const clid = sp.getProperty('CLIENT_ID');
+  const clsec = sp.getProperty('CLIENT_SECRET');
+  if (!clid || !clsec) {
+    Logger.log('CLIENT_ID and CLIENT_SECRET are not set yet.');
+    return;
+  }
+  setPKCEChallengeVerifier();
+  const service = getService();
+  if (service.hasAccess()) {
+    Logger.log('Already authorized.');
+  } else {
+    const authorizationUrl = service.getAuthorizationUrl();
+    Logger.log('Authorize this app by visiting this URL: %s', authorizationUrl);
+  }
+}
 
-function getService() {
-  pkceChallengeVerifier();
-  const userProps = PropertiesService.getUserProperties();
-  const scriptProps = PropertiesService.getScriptProperties();
-  return OAuth2.createService('twitter')
-    .setAuthorizationBaseUrl('https://twitter.com/i/oauth2/authorize')
-    .setTokenUrl('https://api.twitter.com/2/oauth2/token?code_verifier=' + userProps.getProperty("code_verifier"))
-    .setClientId(CLIENT_ID)
-    .setClientSecret(CLIENT_SECRET)
-    .setCallbackFunction('authCallback')
-    .setPropertyStore(userProps)
-    .setScope('users.read tweet.read tweet.write offline.access')
-    .setParam('response_type', 'code')
-    .setParam('code_challenge_method', 'S256')
-    .setParam('code_challenge', userProps.getProperty("code_challenge"))
-    .setTokenHeaders({
-      'Authorization': 'Basic ' + Utilities.base64Encode(CLIENT_ID + ':' + CLIENT_SECRET),
-      'Content-Type': 'application/x-www-form-urlencoded'
-    })
+function setPKCEChallengeVerifier() {
+  const sp = PropertiesService.getScriptProperties();
+  if (!sp.getProperty('CODE_VERIFIER')) {
+    let verifier = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    for (let i = 0; i < 128; i++) {
+      verifier += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+
+    const sha256Hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, verifier);
+    const challenge = Utilities.base64Encode(sha256Hash)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    sp.setProperty('CODE_VERIFIER', verifier);
+    sp.setProperty('CODE_CHALLENGE', challenge);
+  }
 }
 
 function authCallback(request) {
   const service = getService();
-  const authorized = service.handleCallback(request);
-  if (authorized) {
-    return HtmlService.createHtmlOutput('Success!');
+  const isAuthorized = service.handleCallback(request);
+  if (isAuthorized) {
+    return HtmlService.createHtmlOutput('Authorization Success!');
   } else {
-    return HtmlService.createHtmlOutput('Denied.');
+    return HtmlService.createHtmlOutput('Authorization Denied.');
   }
 }
 
-function pkceChallengeVerifier() {
-  var userProps = PropertiesService.getUserProperties();
-  if (!userProps.getProperty("code_verifier")) {
-    var verifier = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-
-    for (var i = 0; i < 128; i++) {
-      verifier += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-
-    var sha256Hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, verifier)
-
-    var challenge = Utilities.base64Encode(sha256Hash)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-    userProps.setProperty("code_verifier", verifier)
-    userProps.setProperty("code_challenge", challenge)
-  }
+function resetService() {
+  getService().reset();
+  const sp = PropertiesService.getScriptProperties();
+  sp.deleteProperty('CODE_VERIFIER');
+  sp.deleteProperty('CODE_CHALLENGE');
+  Logger.log('Access token and PKCE properties deleted. Rerun initialSetUp().');
 }
 
-function logRedirectUri() {
-  var service = getService();
-  Logger.log(service.getRedirectUri());
+function getService() {
+  const sp = PropertiesService.getScriptProperties();
+  const clid = sp.getProperty('CLIENT_ID');
+  const clsec = sp.getProperty('CLIENT_SECRET');
+  const verifier = sp.getProperty('CODE_VERIFIER');
+  const challenge = sp.getProperty('CODE_CHALLENGE');
+
+  return OAuth2.createService('twitter')
+    .setAuthorizationBaseUrl('https://twitter.com/i/oauth2/authorize')
+    .setTokenUrl('https://api.twitter.com/2/oauth2/token?code_verifier=' + verifier)
+    .setClientId(clid)
+    .setClientSecret(clsec)
+    .setCallbackFunction('authCallback')
+    .setPropertyStore(sp)
+    .setScope('users.read tweet.read tweet.write offline.access')
+    .setParam('response_type', 'code')
+    .setParam('code_challenge_method', 'S256')
+    .setParam('code_challenge', challenge)
+    .setTokenHeaders({
+      'Authorization': 'Basic ' + Utilities.base64Encode(clid + ':' + clsec),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    })
 }
 
 function sendTweet(tweetText) {
@@ -108,21 +152,21 @@ function sendTweet(tweetText) {
 
   var service = getService();
   if (service.hasAccess()) {
-    var url = `https://api.twitter.com/2/tweets`;
-    var response = UrlFetchApp.fetch(url, {
+    const url = 'https://api.twitter.com/2/tweets';
+    const response = UrlFetchApp.fetch(url, {
       method: 'POST',
-      'contentType': 'application/json',
+      contentType: 'application/json',
       headers: {
         Authorization: 'Bearer ' + service.getAccessToken()
-      },
+      },  
       muteHttpExceptions: true,
       payload: JSON.stringify(payload)
-    });
-    var result = JSON.parse(response.getContentText());
+    }); 
+    const result = JSON.parse(response.getContentText());
     Logger.log(JSON.stringify(result, null, 2));
+    //return reslut.data.id;
   } else {
-    var authorizationUrl = service.getAuthorizationUrl();
-    Logger.log('Open the following URL and re-run the script: %s', authorizationUrl);
+    Logger.log('No access authorization. Rerun initialSetUp().');
   }
 }
 
@@ -132,7 +176,7 @@ function sendRandomTweet() {
 
   // [A:text, B:count, C:number, D:len(text)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange("A1:D");
+  const range = sheet.getRange('A1:D');
 
   // generate random index [0, (LastRow - 1)]
   const i = Math.floor(Math.random() * sheet.getLastRow());
@@ -141,7 +185,7 @@ function sendRandomTweet() {
   const selectedRow = range.getValues()[i];
   //Logger.log(selectedRow);
   const nextCount = selectedRow[1] + 1;
-  sheet.getRange("B" + (i + 1)).setValue(nextCount);
+  sheet.getRange('B' + (i + 1)).setValue(nextCount);
 
   sendTweet(selectedRow[0]);
 }
@@ -152,7 +196,7 @@ function sendRareTweet() {
 
   // [A:text, B:count, C:number, D:len(text)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange("A1:D");
+  const range = sheet.getRange('A1:D');
 
   // column 2 is count
   range.sort({column: 2, ascending: true});
@@ -160,7 +204,7 @@ function sendRareTweet() {
   const selectedRow = range.getValues()[0];
   //Logger.log(selectedRow)
   const nextCount = selectedRow[1] + 1;
-  sheet.getRange("B1").setValue(nextCount);
+  sheet.getRange('B1').setValue(next7Count);
 
   // cloumn 3 is serial number, restore normal order
   range.sort({column: 3, ascending: true});
@@ -179,14 +223,14 @@ function sendNewYearTweet() {
 
   // Happy New Year!
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange("A1:D");
+  const range = sheet.getRange('A1:D');
 
   const numlist = [29, 602];
   for (const num of numlist) {
     // num starts from 1, arrayindex from 0
     const selectedRow = range.getValues()[num - 1];
     const nextCount = selectedRow[1] + 1;
-    sheet.getRange("B" + num).setValue(nextCount);
+    sheet.getRange('B' + num).setValue(nextCount);
 
     sendTweet(selectedRow[0]);
     if (num == numlist.slice(-1)[0]) break;
