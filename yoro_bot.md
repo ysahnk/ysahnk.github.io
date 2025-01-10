@@ -47,20 +47,22 @@
    - B列：ツイート回数の記録、初期値はゼロ
    - C列：1から通し番号を振る
    - D列：LEN(A#)
-3. 「拡張機能」からAppsScriptを作成する。
+2. 「拡張機能」からAppsScriptを作成する。
    - 「ライブラリを追加」からOAuth2ライブラリを追加
      - 1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF
    - 「プロジェクトの設定」からスクリプトIDを覚えておく。
-4. TwitterDeveloperPortalでAppを作成する。
+3. TwitterDeveloperPortalでAppを作成する。
    - 「User authentication settings」の「Callback URI / Redirect URL」の欄に上で覚えたIDを含むURLを入力する。
      - https://script.google.com/macros/d/スクリプトID/usercallback
    - 「Keys and tokens」から「Client ID」と「Client Secret」を保存する。
-5. AppsScriptの「エディタ」に以下の`コード.gs`をコピーして貼り付ける。
-6. 「プロジェクトの設定」の「スクリプトプロパティの追加」から、保存した値を設定する。
+4. AppsScriptの「エディタ」に以下の`コード.gs`をコピーして貼り付ける。
+5. 「プロジェクトの設定」の「スクリプトプロパティを追加」から、保存した値を設定する。
    - CLIENT_ID
    - CLIENT_SECRET
-7. 「エディタ」から`initialSetUp()`関数を選択し「実行」する。
-8. 「トリガー」から必要なトリガーを追加する。
+6. 「エディタ」から`initialSetUp()`関数を選択し「実行」する。
+   - ダイアログに従い、AppsScriptからGoogleアカウントへのアクセスを許可する。
+   - 実行ログに表示されるURLにブラウザからアクセスし、Twitterアカウントへのアクセスを許可する。
+7. 「トリガー」から必要なトリガーを追加する。
    - 30分おきのトリガーで`drawLots(48)`だと一日一ツイート平均となる。
 
 ### コード.gs
@@ -108,9 +110,9 @@ function authCallback(request) {
   const service = getService();
   const isAuthorized = service.handleCallback(request);
   if (isAuthorized) {
-    return HtmlService.createHtmlOutput('Authorization Success!');
+    return HtmlService.createHtmlOutput('Success! You can close this tab.');
   } else {
-    return HtmlService.createHtmlOutput('Authorization Denied.');
+    return HtmlService.createHtmlOutput('Denied. You can close this tab.');
   }
 }
 
@@ -147,10 +149,10 @@ function getService() {
 }
 
 function sendTweet(tweetText) {
-  var payload = { text: tweetText };
+  const payload = { text: tweetText };
   //Logger.log(payload);
 
-  var service = getService();
+  const service = getService();
   if (service.hasAccess()) {
     const url = 'https://api.twitter.com/2/tweets';
     const response = UrlFetchApp.fetch(url, {
@@ -172,7 +174,7 @@ function sendTweet(tweetText) {
 
 function sendRandomTweet() {
   // trigger fires every 30min (48/day)
-  if (!drawLots(48)) return;
+  if (!drawLots(36)) return;
 
   // [A:text, B:count, C:number, D:len(text)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -204,7 +206,7 @@ function sendRareTweet() {
   const selectedRow = range.getValues()[0];
   //Logger.log(selectedRow)
   const nextCount = selectedRow[1] + 1;
-  sheet.getRange('B1').setValue(next7Count);
+  sheet.getRange('B1').setValue(nextCount);
 
   // cloumn 3 is serial number, restore normal order
   range.sort({column: 3, ascending: true});
