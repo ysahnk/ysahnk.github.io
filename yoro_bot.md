@@ -2,6 +2,8 @@
 
 ### 更新履歴
 
+- 2025/06/27 ー 『日本人の身体観の歴史』からの引用をツイートデータベースに追加
+- 2025/06/05 ー wikipediaリプライ機能を実装
 - 2025/01/09 ー botのつくり方を追記
 - 2025/01/06 ー GitHubPagesにこのページを作成
 - 2024/12/22 ー GoogleAppsScriptに移植して稼働再開
@@ -38,7 +40,8 @@
 |済|『人科学』|『養老孟司の人間科学講義』|
 |済|『文学史』|『身体の文学史』|
 |済|『を読む』|『からだを読む』|
-|途|『身体観』|『日本人の身体観の歴史』|
+|済|『身体観』|『日本人の身体観の歴史』|
+|未|『遺言。』|『遺言。』|
 
 ### botのつくり方
 
@@ -46,7 +49,8 @@
    - A列：140文字以内のツイート本文
    - B列：ツイート回数の記録、初期値はゼロ
    - C列：1から通し番号を振る
-   - D列：LEN(A#)
+   - D列：LEN(A#)、D1に`=LEN(A1)`と入力してからD列を全選択して`Ctrl + Enter`
+   - E列（任意）：空でない場合、A列のツイートへのリプライとしてぶら下がる文字列
 2. 「拡張機能」からAppsScriptを作成する。
    - 「ライブラリを追加」からOAuth2ライブラリを追加
      - 1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF
@@ -148,9 +152,13 @@ function getService() {
     })
 }
 
-function sendTweet(tweetText) {
-  const payload = { text: tweetText };
-  //Logger.log(payload);
+function sendTweet(tweetText, targetID) {
+  const payload = {
+    text: tweetText,
+    ...(targetID && {
+      reply: {'in_reply_to_tweet_id': targetID}
+    })
+  };
 
   const service = getService();
   if (service.hasAccess()) {
@@ -163,10 +171,10 @@ function sendTweet(tweetText) {
       },  
       muteHttpExceptions: true,
       payload: JSON.stringify(payload)
-    }); 
+    });
     const result = JSON.parse(response.getContentText());
     Logger.log(JSON.stringify(result, null, 2));
-    //return reslut.data.id;
+    return result.data.id;
   } else {
     Logger.log('No access authorization. Rerun initialSetUp().');
   }
@@ -176,42 +184,48 @@ function sendRandomTweet() {
   // trigger fires every 30min (48/day)
   if (!drawLots(36)) return;
 
-  // [A:text, B:count, C:number, D:len(text)]
+  // [A:text, B:count, C:number, D:len(text), E:url(optional)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange('A1:D');
+  const range = sheet.getRange('A1:E');
 
   // generate random index [0, (LastRow - 1)]
   const i = Math.floor(Math.random() * sheet.getLastRow());
 
   // get (i + 1)th row in range
   const selectedRow = range.getValues()[i];
-  //Logger.log(selectedRow);
   const nextCount = selectedRow[1] + 1;
   sheet.getRange('B' + (i + 1)).setValue(nextCount);
 
-  sendTweet(selectedRow[0]);
+  const targetID = sendTweet(selectedRow[0], null);
+  if (selectedRow[4]) {
+    Utilities.sleep(10000);
+    sendTweet(selectedRow[4], targetID);
+  }
 }
 
 function sendRareTweet() {
   // trigger fires every 30min (48/day)
   if (!drawLots(48 * 5)) return;
 
-  // [A:text, B:count, C:number, D:len(text)]
+  // [A:text, B:count, C:number, D:len(text), E:url(optional)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange('A1:D');
+  const range = sheet.getRange('A1:E');
 
   // column 2 is count
   range.sort({column: 2, ascending: true});
 
   const selectedRow = range.getValues()[0];
-  //Logger.log(selectedRow)
   const nextCount = selectedRow[1] + 1;
   sheet.getRange('B1').setValue(nextCount);
 
   // cloumn 3 is serial number, restore normal order
   range.sort({column: 3, ascending: true});
   
-  sendTweet(selectedRow[0]);
+  const targetID = sendTweet(selectedRow[0], null);
+  if (selectedRow[4]) {
+    Utilities.sleep(10000);
+    sendTweet(selectedRow[4], targetID);
+  }
 }
 
 function drawLots(num) {
@@ -234,8 +248,8 @@ function sendNewYearTweet() {
     const nextCount = selectedRow[1] + 1;
     sheet.getRange('B' + num).setValue(nextCount);
 
-    sendTweet(selectedRow[0]);
-    if (num == numlist.slice(-1)[0]) break;
+    sendTweet(selectedRow[0], null);
+    if (num == numlist.at(-1)) break;
     Utilities.sleep(10000);
   }
 }
