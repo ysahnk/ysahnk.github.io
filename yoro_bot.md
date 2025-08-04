@@ -207,22 +207,21 @@ function sendRandomTweet() {
 
 function sendRareTweet() {
   // trigger fires every 30min (48/day)
-  if (!drawLots(48 * 5)) return;
+  if (!drawLots(48 * 3)) return;
 
   // [A:text, B:count, C:number, D:len(text), E:url(optional)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const range = sheet.getRange('A1:E');
+  const rows = range.getValues();
 
-  // column 2 is count
-  range.sort({column: 2, ascending: true});
+  const minCount = rows.sort((x, y) => x[1] - y[1]).at(0)[1];
+  const minRows = rows.filter((row) => row[1] == minCount);
+  const selectedRow = minRows[Math.floor(Math.random() * minRows.length)];
 
-  const selectedRow = range.getValues()[0];
+  const num = selectedRow[2];
   const nextCount = selectedRow[1] + 1;
-  sheet.getRange('B1').setValue(nextCount);
+  sheet.getRange('B' + num).setValue(nextCount);
 
-  // cloumn 3 is serial number, restore normal order
-  range.sort({column: 3, ascending: true});
-  
   const targetID = sendTweet(selectedRow[0], null);
   if (selectedRow[4]) {
     Utilities.sleep(10000);
