@@ -155,6 +155,12 @@ function getService() {
 }
 
 function sendTweet(tweetText, targetID) {
+  const service = getService();
+  if (!service.hasAccess()) {
+    Logger.log('No access authorization. Rerun initialSetUp().');
+    return null;
+  }
+
   const payload = {
     text: tweetText,
     ...(targetID && {
@@ -162,24 +168,20 @@ function sendTweet(tweetText, targetID) {
     })
   };
 
-  const service = getService();
-  if (service.hasAccess()) {
-    const url = 'https://api.twitter.com/2/tweets';
-    const response = UrlFetchApp.fetch(url, {
-      method: 'POST',
-      contentType: 'application/json',
-      headers: {
-        Authorization: 'Bearer ' + service.getAccessToken()
-      },  
-      muteHttpExceptions: true,
-      payload: JSON.stringify(payload)
-    });
-    const result = JSON.parse(response.getContentText());
-    Logger.log(JSON.stringify(result, null, 2));
-    return result.data.id;
-  } else {
-    Logger.log('No access authorization. Rerun initialSetUp().');
-  }
+  const url = 'https://api.twitter.com/2/tweets';
+  const response = UrlFetchApp.fetch(url, {
+    method: 'POST',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + service.getAccessToken()
+    },  
+    muteHttpExceptions: true,
+    payload: JSON.stringify(payload)
+  });
+
+  const result = JSON.parse(response.getContentText());
+  Logger.log(JSON.stringify(result, null, 2));
+  return result.data.id;
 }
 
 function sendRandomTweet() {
