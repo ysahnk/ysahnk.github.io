@@ -94,22 +94,22 @@ function initialSetUp() {
 
 function setPKCEChallengeVerifier() {
   const sp = PropertiesService.getScriptProperties();
-  if (!sp.getProperty('CODE_VERIFIER')) {
-    let verifier = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-    for (let i = 0; i < 128; i++) {
-      verifier += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
+  if (sp.getProperty('CODE_VERIFIER')) return;
 
-    const sha256Hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, verifier);
-    const challenge = Utilities.base64Encode(sha256Hash)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    sp.setProperty('CODE_VERIFIER', verifier);
-    sp.setProperty('CODE_CHALLENGE', challenge);
+  let verifier = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  for (let i = 0; i < 128; i++) {
+    verifier += possible.charAt(Math.floor(Math.random() * possible.length));
   }
+
+  const sha256Hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, verifier);
+  const challenge = Utilities.base64Encode(sha256Hash)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  sp.setProperty('CODE_VERIFIER', verifier);
+  sp.setProperty('CODE_CHALLENGE', challenge);
 }
 
 function authCallback(request) {
