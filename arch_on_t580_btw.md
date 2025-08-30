@@ -1,23 +1,30 @@
 <img src="/images/iconhikari02.jpg" alt="penguin icon image" width="100" height="100" />
 
 ### I use arch on T580, btw
-t580 DDR4-2400 PC4-19200
-Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz / coffee lake-s
-Intel UHD Graphics 620 / Gen9.5
-SSD / SATA 6.0Gb/s, 2.5" wide, 7mm high (e.g. xxxGB SSD)
-M.2 SSD / PCIe NVMe, PCIe 3.0 x 2, 16Gb/s
-128GB M.2 SSD / PCIe NVMe, PCIe 3.0 x 2, 16Gb/s,
-in WWAN slot as 2nd Storage, mutually exclusive with WWAN
+|||
+|---|-------------------|
+|MEM|DDR4-2400 PC4-19200|
+|CPU|Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz / coffee lake-s|
+|GPU|Intel UHD Graphics 620 / Gen9.5|
+|SSD|M.2 SSD / PCIe NVMe, PCIe 3.0 x 2, 16Gb/s|
 
-### Thunderbolt firmware problem (important)
+### Thunderbolt firmware problem (important!)
+T580を含む、この世代のThinkpadにはファームウェアに関しての致命的な問題が存在します。
+
 [The "Thunderbolt Firmware Problem" Explained (reddit.com)](https://www.reddit.com/r/thinkpad/comments/1dfdp18/the_thunderbolt_firmware_problem_explained/)
 
-pacman -S fwupd udisk2 efivat
+> 2017年から2019年にかけて製造されたThinkPadの複数のモデルには、Thunderbolt 3コントローラーがしばらくすると自動的に停止するという厄介なバグがありました。状況は悪化し、Lenovoはこの問題を認め、ファームウェアアップデートをリリースして問題を解決しようとしました。このアップデートはほとんどのユーザーにとって有効で、何らかの理由でアップデートを実行できなかったユーザーは、デバイスを送付してマザーボードを交換することができました。しかし、これはもはや不可能なため、現状では自分で行うしかありません。
+
+何やら大袈裟な感じがしますが、実際にやらなければいけないことは多くはありません。`LVFS（Linux Vendor Firmware Service）`という各社のファームウェア更新を一元的に配布するためのサービスと、それを利用するプログラムである`fwupd`との開発により、linux環境でのファームウェア更新は飛躍的に簡単になりました。
+
+```bash
+pacman -S fwupd            # pacman -S udisk2 efivar for UEFI firmware update
 fwupdmgr refresh
 fwupdmgr get-updates
 fwupdmgr update
 fwupdtool install foo.cab --verbose
 fwupdmgr install DEVICE-ID	# from the lower version 14->18->20
+```
 
 ### Yellowish tint monitor
 
