@@ -8,8 +8,9 @@
 |GPU|Intel UHD Graphics 620 / Gen9.5|
 |SSD|M.2 SSD / PCIe NVMe, PCIe 3.0 x 2, 16Gb/s|
 
-### Thunderbolt firmware problem (important!)
-T580を含む、この世代のThinkpadにはファームウェアに関しての致命的な問題が存在します。
+### Thunderbolt firmware problem
+> [!IMPORTANT]
+> T580を含む、この世代のThinkpadにはファームウェアに関しての致命的な問題が存在します。
 
 [The "Thunderbolt Firmware Problem" Explained (reddit.com)](https://www.reddit.com/r/thinkpad/comments/1dfdp18/the_thunderbolt_firmware_problem_explained/)
 
@@ -22,14 +23,14 @@ T580を含む、この世代のThinkpadにはファームウェアに関して�
 何やら大袈裟な感じがしますが、実際にやらなければいけないことは多くはありません。`LVFS（Linux Vendor Firmware Service）`という各社のファームウェア更新を一元的に配布するためのサービスと、それを利用するプログラムである`fwupd`との開発により、linux環境でのファームウェア更新は飛躍的に簡単になりました。
 
 ```bash
-pacman -S fwupd                # additionally `pacman -S udisk2 efivar` for UEFI firmware update
+pacman -S fwupd                # additionally `pacman -S udisks2 efivar` for UEFI firmware update
 fwupdmgr get-devices           # display all devices detected by fwupd
 fwupdmgr refresh               # download latest metadata
 fwupdmgr get-updates           # list available updates
 fwupdmgr update                # install updates
 ```
 
-……本来なら以上のコマンドだけで十分で、この項目が書かれる必要性もなかったはずなのですが、実のところわたしの環境でこの方法ではアップデートが成功しませんでした。
+……と本来なら以上のコマンドだけで十分で、この項目が書かれる必要性もなかったはずなのですが、実のところわたしの環境でこの方法ではアップデートが成功しませんでした。
 
 1. `fwupdmgr get-devices`で`Thunderbolt host controller`を認識していることは確認できる。
    - 認識しない場合：[https://wiki.archlinux.org/title/Thunderbolt#Forcing_power](https://wiki.archlinux.org/title/Thunderbolt#Forcing_power)
@@ -43,14 +44,16 @@ curl https://r2.fwupd.org/lvfs-prod/86e4f830ccc892f1ca8963b1e8e34164e59af4ed-Len
 fwupdmgr local-install foo.cab --verbose
 ```
 
-fwupdか、archのカーネルか、わたしのハードウェアか、どこに問題があるのかわかりませんでしたが、redditを眺めているとlinuxmintでの成功例が数多く投稿されていたので、それに倣うことにしました（I use mint, btw）。
+fwupdか、archのカーネルか、わたしのハードウェアか、どこに問題があるのかわかりませんでしたが、redditを眺めているとlinuxmintでの成功例が数多く投稿されていたので、それに倣うことにしました（yes, I use mint, btw）。
 
-1. isoをダウンロードしてインストールディスクを作成。
+1. isoをダウンロードしてインストールメディアを作成。
 2. `fwupdmgr get-updates`でバージョン20へのアップデートありとの表示！
 3. しかしいざ`fwupdmgr update`すると何故か通らない。万事休すかと思ったが……
 4. `fwupdmgr install <DIVICE-ID>`で結局解決できた。
    - `DEVICE-ID`は`fwupdmgr get-devices`で確認できる`4214d8e87e1aa7de57c19e5954bbef2e462b86a4`のような文字列。
    - このコマンドで出てくるプロンプトに従って、まず`14->18`、その後`18->20`と段階的にやると、無事バージョン20まで到達することができました。
+
+一応書いておくと、実際にmintをハードドライブにまでインストールする必要はなく、インストールメディアから`fwupd`を使用してすべての操作を完了できます。
 
 ### Yellowish tint monitor
 
