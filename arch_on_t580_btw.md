@@ -15,16 +15,42 @@ T580を含む、この世代のThinkpadにはファームウェアに関して�
 
 > 2017年から2019年にかけて製造されたThinkPadの複数のモデルには、Thunderbolt 3コントローラーがしばらくすると自動的に停止するという厄介なバグがありました。状況は悪化し、Lenovoはこの問題を認め、ファームウェアアップデートをリリースして問題を解決しようとしました。このアップデートはほとんどのユーザーにとって有効で、何らかの理由でアップデートを実行できなかったユーザーは、デバイスを送付してマザーボードを交換することができました。しかし、これはもはや不可能なため、現状では自分で行うしかありません。
 
+> ユニットを入手したらすぐに、 LenovoのウェブサイトでThunderbolt/NVMコントローラーのファームウェアバージョンを確認する方法を ご確認ください。中古市場に流通する前に、優秀なIT部門に管理されていたデバイスであれば、ほとんどのデバイスは既にアップデートされていますが、予防保守こそが最良のメンテナンスであるため、念のため確認することをお勧めします。古いバージョンを使用していて、まだ問題が発生していない場合は、Lenovoのウェブサイトの指示に従って、ファームウェアの書き換え方法をご確認ください。この作業を先延ばしにすると、すぐに対処しないと、後々問題が顕在化してしまう可能性があります。
+
+現在（2025年）以降に入手する場合はほぼ間違いなく中古品でしょうから、引用文中にもあるように、以前のオーナーがアップデートを済ませていたかどうかが問題となります。わたしの個人的な印象ですが、ネット上で検索したときにこの問題についての日本語による情報がほとんど見つからないことを考えると、油断せずに必ずアップデート状況を確認しておくべきだと思います。
+
 何やら大袈裟な感じがしますが、実際にやらなければいけないことは多くはありません。`LVFS（Linux Vendor Firmware Service）`という各社のファームウェア更新を一元的に配布するためのサービスと、それを利用するプログラムである`fwupd`との開発により、linux環境でのファームウェア更新は飛躍的に簡単になりました。
 
 ```bash
-pacman -S fwupd            # pacman -S udisk2 efivar for UEFI firmware update
-fwupdmgr refresh
-fwupdmgr get-updates
-fwupdmgr update
-fwupdtool install foo.cab --verbose
-fwupdmgr install DEVICE-ID	# from the lower version 14->18->20
+pacman -S fwupd                # additionally `pacman -S udisk2 efivar` for UEFI firmware update
+fwupdmgr get-devices           # display all devices detected by fwupd
+fwupdmgr refresh               # download latest metadata
+fwupdmgr get-updates           # list available updates
+fwupdmgr update                # install updates
 ```
+
+……本来なら以上のコマンドだけで十分で、この項目が書かれる必要性もなかったはずなのですが、実のところわたしの環境でこの方法ではアップデートが成功しませんでした。
+
+1. `fwupdmgr get-devices`で`Thunderbolt host controller`を認識していることは確認できる。
+   - 認識しない場合：[https://wiki.archlinux.org/title/Thunderbolt#Forcing_power](https://wiki.archlinux.org/title/Thunderbolt#Forcing_power)
+2. `fwupdmgr get-updates`で、バグを完全に修正するバージョン20へのアップデートが表示されるべきところ
+3. 現在のバージョンが14であるにも関わらずアップデートなしと出てしまう。
+
+仕方ないので次に以下のように、LVFSサイトから必要なファイルを直にダウンロードして、手動でのインストールを試みました。しかし、これもうまく進みませんでした。`did not find magic`といったようなエラーが出ました。
+
+```bash
+curl https://r2.fwupd.org/lvfs-prod/86e4f830ccc892f1ca8963b1e8e34164e59af4ed-Lenovo-ThinkPad-T580-Thunderbolt-Firmware-N27TF18W_AssistMode.cab > foo.cab
+fwupdmgr local-install foo.cab --verbose
+```
+
+fwupdか、archのカーネルか、わたしのハードウェアか、どこに問題があるのかわかりませんでしたが、redditを眺めているとlinuxmintでの成功例が数多く投稿されていたので、それに倣うことにしました（I use mint, btw）。
+
+1. isoをダウンロードしてインストールディスクを作成。
+2. `fwupdmgr get-updates`でバージョン20へのアップデートありとの表示！
+3. しかしいざ`fwupdmgr update`すると何故か通らない。万事休すかと思ったが……
+4. `fwupdmgr install <DIVICE-ID>`で結局解決できた。
+   - `DEVICE-ID`は`fwupdmgr get-devices`で確認できる`4214d8e87e1aa7de57c19e5954bbef2e462b86a4`のような文字列。
+   - このコマンドで出てくるプロンプトに従って、まず`14->18`、その後`18->20`と段階的にやると、無事バージョン20まで到達することができました。
 
 ### Yellowish tint monitor
 
