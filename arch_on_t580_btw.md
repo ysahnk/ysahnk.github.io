@@ -1,7 +1,7 @@
 <img src="/images/iconhikari02.jpg" alt="penguin icon image" width="100" height="100" />
 
 ### I use arch on T580, btw
-|||
+|   |                   |
 |---|-------------------|
 |MEM|DDR4-2400 PC4-19200|
 |CPU|Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz / coffee lake-s|
@@ -57,12 +57,16 @@ fwupdか、archのカーネルか、わたしのハードウェアか、どこ�
 
 ### Yellowish tint monitor
 
+この機種を含んだいくつかのThinkpadのモニターの色味が黄色がかっている、という評判がネット上で見られます。わたしの経験から言わせてもらうと、これは本当です。特にT580以前に使用していたラップトップが青味の強いモニターだったので、最初のうちはその落差でかなり黄色く見えていました。ただし、使用しているうちに一ヶ月もしないで慣れてきて普通に見えるようになります。逆に言うと、普通もしくは青味のモニターと一緒に横に並べて使用する場合には、もしかするとずっと違和感が残り続けることになるかもしれません。単独で使用するだけならほとんど問題はないことをわたしが（誰？）保証します。
+
 ### Bluetooth
-pacman -S bluez bluez-utils
-systemctl enable --now bluetooth
 
-Error
-
+ディスプレイマネージャーを使用していないので、電源を入れてブート後にまずはコンソールに着地するのですが、その画面で必ず以下のようなメッセージが割り込むような形で出力されるのが気になっていました。
+```
+Bluetooth: hci0: Reading supported features failed (-16)
+```
+周辺のログは以下のとおりでした。
+```
 Aug 30 09:56:26 laptop kernel: Bluetooth: hci0: Waiting for firmware download to complete
 Aug 30 09:56:26 laptop kernel: Bluetooth: hci0: Firmware loaded in 1742667 usecs
 Aug 30 09:56:26 laptop kernel: Bluetooth: hci0: Waiting for device to boot
@@ -75,21 +79,38 @@ Aug 30 09:56:26 laptop kernel: Bluetooth: hci0: Error reading debug features
 Aug 30 09:56:26 laptop kernel: Bluetooth: hci0: HCI LE Coded PHY feature bit is set, but its usage is not supported.
 Aug 30 09:56:26 laptop kernel: Bluetooth: MGMT ver 1.23
 Aug 30 09:56:26 laptop bluetoothd[1083]: Battery Provider Manager created
+```
+ChatGPTさんに訊ねてみました。
 
--16 は EBUSY（リソースがビジー状態）というエラーコードです。
-これは、Bluetooth ファームウェアまたはチップがまだ初期化完了していないときに機能の読み取りを試みたことを意味します。
-このエラーは Bluetooth の基本機能（ペアリング／ファイル送信など）には影響しないことがほとんどです。
+> -16 は EBUSY（リソースがビジー状態）というエラーコードです。\
+> これは、Bluetooth ファームウェアまたはチップがまだ初期化完了していないときに機能の読み取りを試みたことを意味します。\
+> このエラーは Bluetooth の基本機能（ペアリング／ファイル送信など）には影響しないことがほとんどです。
 
-Bluetooth: hci0: Unable to create CMAC crypto context
+気味が悪いですが問題はないようです。ちなみにこれはbluetooth系のパッケージを導入する以前から発生していました。それをインストールしたら直ったというようなこともありませんでした。必要最小限のbluetoothの導入として以下のようにしてみたところ……
 
+```bash
+pacman -S bluez bluez-utils
+systemctl enable --now bluetooth
 
-###
-
+bluetoothctl
+> scan on
+> scan off
+> devices                           # list scanned and pairable devices
+> pair <device_address>             # OK
+> trust <device_address>            # OK
+> connect <device_address>          # FAILED!
+```
+```
 bluetoothd[7010]: [:1.50:method_call] > org.bluez.Device1.Connect [#31]
 bluetoothd[7010]: src/device.c:connect_profiles() /org/bluez/hci0/dev_XX_XX_XX_XX_XX_XX (all), client :1.50
 bluetoothd[7010]: profiles/audio/a2dp.c:a2dp_source_connect() path /org/bluez/hci0/dev_XX_XX_XX_XX_XX_XX
 bluetoothd[7010]: src/service.c:btd_service_connect() a2dp-source profile connect failed for XX:XX:XX:XX:XX:XX: Protocol not available
 bluetoothd[7010]: [:1.50:error] < org.bluez.Error.Failed [#31]
+```
+
+`pair`,`trust`まではいいのだが`connect`が失敗する、という状態になりました。再びChatGPTさん曰く……
+
+
 
 この症状、非常によくあるパターンで、**特に Android デバイスと BlueZ を組み合わせたとき**に頻出します。要点をまとめつつ、なぜ `connect` に失敗しても `bluetooth-sendto` で送信できるのかを解説します。
 
@@ -178,20 +199,13 @@ trust	自動接続やサービスへのアクセスを許可。ユーザ操作�
 
 ###
 
-bluetoothctl
-> scan on
-> scan off
-> devices						# list scanned and pairable devices
-> pair <device_address>
-> trust <device_address>
-> connect <device_address>
-
-###
-
+```bash
 pacman -S gnome-bluetooth-3.0
 bluetooth-sendto --device=XX:XX:... file.png	# it works
+```
 
 ### GPU acceleration
+```
 pacman -S intel-media-driver
 pacman -S intel-gpu-tools	# intel_gpu_top for monitoring GPU usage
 pacman -S libva-utils
@@ -203,14 +217,17 @@ chrome://gpu
 chrome://media-internals 
 chrome extension h264ify
 watch -n 1 cat /sys/class/drm/card1/gt_cur_freq_mhz
-
+```
 ### Android file transfer
+```
 pacman -S gvfs-mtp
 android file transfer
 lsusb to check Bus xxx Device yyy
 gio mount mtp://[usb:xxx,yyy]/
 access via /run/user/$UID/gvfs/...
-
+```
 ### Console font
+```
 echo FONT=LatGrkCyr-12x22 >> /etc/vconsole.conf
 echo KEYMAP=jp106 >> /etc/vconsole.conf
+```
