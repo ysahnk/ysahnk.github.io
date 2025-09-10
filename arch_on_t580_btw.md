@@ -204,20 +204,17 @@ pacman -S gnome-bluetooth-3.0
 bluetooth-sendto --device=XX:XX:... file.png	# it works
 ```
 
-### GPU acceleration
+### GPU acceleration on chromium
+Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。\
+[Hardware video acceleration - ArchWiki](https://wiki.archlinux.org/title/Hardware_video_acceleration)
+> Intel graphics open-source drivers support VA-API:\
+> HD Graphics series starting from Broadwell (2014) and newer (e.g. Intel Arc) are supported by intel-media-driver.
 ```
 pacman -S intel-media-driver
-pacman -S intel-gpu-tools	# intel_gpu_top for monitoring GPU usage
-pacman -S libva-utils
-vainfo: VA-API version: 1.22 (libva 2.22.0)
-vainfo: Driver version: Intel iHD driver for Intel(R) Gen Graphics - 25.2.1 ()
-.config/chromium-flags.conf
---enable-features=AcceleratedVideoDecodeLinuxGL
-chrome://gpu 
-chrome://media-internals 
-chrome extension h264ify
-watch -n 1 cat /sys/class/drm/card1/gt_cur_freq_mhz
+echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags.conf
 ```
+これでchromiumが特定のファイルの動画再生にGPUを使うようになります。ただしyoutubeの動画で有効にするためにはもう一つ必要なものがあります。「特定のファイル」と書いたところがポイントで、現在youtubeがデフォルトで選択して送信してくるファイル形式はこれには当てはまりません。そのファイル形式をを常に`H.264`に指定するために[h264ify](https://chromewebstore.google.com/detail/h264ify/aleakchihdccplidncghkekgioiakgal)という拡張機能をダウンロードします。正しく動作しているかの確認は`chrome://media-internals`や`/sys/class/drm/card1/gt_cur_freq_mhz`などを見るか、あるいは`htop`を使ってCPUとGPUとを同時に見比べてもいいでしょう。。
+
 ### Android file transfer
 ```
 pacman -S gvfs-mtp
