@@ -57,11 +57,33 @@ fwupdか、archのカーネルか、わたしのハードウェアか、どこ�
 
 ### Yellowish tint monitor
 
-この機種を含んだいくつかのThinkpadのモニターの色味が黄色がかっている、という評判がネット上で見られます。わたしの経験から言わせてもらうと、これは本当です。特にT580以前に使用していたラップトップが青味の強いモニターだったので、最初のうちはその落差でかなり黄色く見えていました。ただし、使用しているうちに一ヶ月もしないで慣れてきて普通に見えるようになります。逆に言うと、普通もしくは青味のモニターと一緒に横に並べて使用する場合には、もしかするとずっと違和感が残り続けることになるかもしれません。単独で使用するだけならほとんど問題はないことをわたしが（誰？）保証します。
+この機種を含んだいくつかのThinkpadのモニターの色味が黄色がかっている、という評判がネット上で見られます。わたしの経験から言わせてもらうと、これは本当です。特にT580以前に使用していたラップトップが青味の強いモニターだったので、最初のうちはその落差でかなり黄色く見えていました。ただし、使用しているうちに一ヶ月もしないで慣れてきて普通に見えるようになります。逆に言うと、普通もしくは青味のモニターと一緒に横に並べて使用する場合には、もしかするとずっと違和感が残り続けることになるかもしれません。単独で使用するだけならほとんど問題はないことをわたしが［誰？］保証します。
 
-### Bluetooth
+### GPU acceleration on chromium
+Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。\
+[Hardware video acceleration - ArchWiki](https://wiki.archlinux.org/title/Hardware_video_acceleration)
+> Intel graphics open-source drivers support VA-API:\
+> HD Graphics series starting from Broadwell (2014) and newer (e.g. Intel Arc) are supported by intel-media-driver.
+```
+pacman -S intel-media-driver
+echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags.conf
+```
+これでchromiumが特定のファイルの動画再生にGPUを使うようになります。ただしyoutubeの動画で有効にするためにはもう一つ必要なものがあります。「特定のファイル」と書いたところがポイントで、現在youtubeがデフォルトで選択して送信してくるファイル形式はこれには当てはまりません。そのファイル形式をを常に`H.264`に指定するために[h264ify](https://chromewebstore.google.com/detail/h264ify/aleakchihdccplidncghkekgioiakgal)という拡張機能をダウンロードします。正しく動作しているかの確認は`chrome://media-internals`や`/sys/class/drm/card1/gt_cur_freq_mhz`などを見るか、あるいは`htop`を使ってCPUとGPUとを同時に見比べてもいいでしょう。`htop`には実はデフォルトでは隠れているGPUのモニターがあって`F2`の設定から表示することができます
 
-ディスプレイマネージャーを使用していないので、電源を入れてブート後にまずはコンソールに着地するのですが、その画面で必ず以下のようなメッセージが割り込むような形で出力されるのが気になっていました。
+### Android file transfer via usb-c
+```
+pacman -S gvfs-mtp
+# lsusb to check Bus xxx Device yyy
+gio mount mtp://[usb:xxx,yyy]/
+# access via /run/user/$UID/gvfs/...
+```
+### Console font
+```
+echo FONT=LatGrkCyr-12x22 >> /etc/vconsole.conf
+echo KEYMAP=jp106 >> /etc/vconsole.conf
+```
+### Bluetooth 01 (unknown log message)
+ディスプレイマネージャーを使用していないので、電源を入れてブート後にまずはコンソールに着地するのですが、その画面でほぼ毎回必ず以下のようなメッセージが割り込むような形で出力されるのが気になっていました。
 ```
 Bluetooth: hci0: Reading supported features failed (-16)
 ```
@@ -86,7 +108,10 @@ ChatGPTさんに訊ねてみました。
 > これは、Bluetooth ファームウェアまたはチップがまだ初期化完了していないときに機能の読み取りを試みたことを意味します。\
 > このエラーは Bluetooth の基本機能（ペアリング／ファイル送信など）には影響しないことがほとんどです。
 
-気味が悪いですが問題はないようです。ちなみにこれはbluetooth系のパッケージを導入する以前から発生していました。それをインストールしたら直ったというようなこともありませんでした。必要最小限のbluetoothの導入として以下のようにしてみたところ……
+気味が悪いですが問題はないようです。ちなみにこれはbluetooth系のパッケージを導入する以前から発生していました。それをインストールしたら直ったというようなこともありませんでした。
+
+### Bluetooth 02 (file transfar)
+アンドロイド端末へのファイル転送を試みました。まず基本的な接続を確認するために以下のようにしました。
 
 ```bash
 pacman -S bluez bluez-utils
@@ -108,123 +133,20 @@ bluetoothd[7010]: src/service.c:btd_service_connect() a2dp-source profile connec
 bluetoothd[7010]: [:1.50:error] < org.bluez.Error.Failed [#31]
 ```
 
-`pair`,`trust`まではいいのだが`connect`が失敗する、という状態になりました。再びChatGPTさん曰く……
+`pair`と`trust`まではいいのだが`connect`が失敗する、という状態になりました。再びChatGPTさんに訊ねてみたところ、特に問題はないことがわかりました。
 
+> `a2dp-source` = BlueZ 側がオーディオを送り出す側（スピーカーなど）として振る舞おうとしている\
+> しかし Android 側はスピーカーではない（むしろオーディオソース）\
+> よって「Protocol not available」＝**そのプロファイルは Android 側がサポートしていない**ため、接続が拒否されている
 
+> `bluetoothctl` の `connect` は、利用可能な全プロファイルを片っ端から試す\
+> その中に **Android 側が非対応なプロファイル（例: a2dp-source）** があると、それが失敗して全体が「connect failed」に見える\
+> でも実際は「一部のプロファイルが使えなかっただけ」
 
-この症状、非常によくあるパターンで、**特に Android デバイスと BlueZ を組み合わせたとき**に頻出します。要点をまとめつつ、なぜ `connect` に失敗しても `bluetooth-sendto` で送信できるのかを解説します。
-
----
-
-## 🧠 結論から：**connect の失敗は重大ではない**
-
-`bluetoothctl` の `connect <address>` で失敗するのは、特定のプロファイル（たとえば A2DP）への接続が失敗しているからです。
-**しかし、OBEX（ファイル転送）は `connect` を実行しなくても Android 側から自動でセッションを張れるため、`bluetooth-sendto` は成功します。**
-
----
-
-## 🔍 詳細なログ解析
-
-あなたのログのポイントはこれです：
-
-```
-a2dp-source profile connect failed for 00:ED:B8:FF:0F:D0: Protocol not available
-```
-
-### ➤ これは何を意味するか？
-
-* `a2dp-source` = BlueZ 側が **オーディオを送り出す側（スピーカーなど）** として振る舞おうとしている
-* しかし Android 側は **スピーカーではない**（むしろオーディオソース）
-* よって「Protocol not available」＝**そのプロファイルは Android 側がサポートしていない**ため、接続が拒否されている
-
-### ➤ つまり：
-
-* `bluetoothctl` の `connect` は、**利用可能な全プロファイルを片っ端から試す**
-* その中に **Android 側が非対応なプロファイル（例: a2dp-source）** があると、それが失敗して全体が「connect failed」に見える
-* でも実際は「一部のプロファイルが使えなかっただけ」
-
----
-
-## 📤 なぜ `bluetooth-sendto` では送信できたのか？
-
-* `bluetooth-sendto` は **OBEX (Object Push Profile)** を使用
-* このプロファイルは Android 側がサポートしており、必要なときに Android 側が自動で OBEX セッションを張りに来る
-* よって `bluetoothctl` の `connect` を成功させる必要がない
-
-つまり：
-
-> **`connect` に失敗しても、必要なプロファイル（OBEX）が相手側で有効なら、そのときだけセッションが確立されて使える**。
-
----
-
-## ✅ 対応や補足
-
-### ✔ 放置で問題ないケース
-
-* ファイル送信だけが目的なら、`connect` にこだわらなくてOK。
-* Android デバイス側から「受信」待機状態にしておけば、受信確認プロンプトも表示される。
-
-### ✔ 気になるなら `connect` 対象のプロファイルを制限
-
-`bluetoothctl` で `connect` が失敗して気になる場合は、BlueZ 側の設定を調整して `a2dp-source` を無効化することもできます（udev ルールや BlueZ ソースレベルで）。ただし少し面倒。
-
-### ✔ Android 側が OBEX Push 対応か確認
-
-一部の Android 端末（特に最近の Pixel やカスタム ROM）では、セキュリティ理由で Bluetooth ファイル受信（OBEX Push）機能が制限されている場合もあります。`bluetooth-sendto` で送れているなら、少なくとも今回はそれが有効だったということです。
-
----
-
-## 🟢 まとめ
-
-| 観点                | 内容                                                |
-| ----------------- | ------------------------------------------------- |
-| `connect` が失敗する理由 | BlueZ が使おうとしたプロファイル（例: a2dp-source）が Android に非対応 |
-| ファイル送信ができた理由      | OBEX は Android 側が対応しており、自動セッション確立される              |
-| 対処は必要か            | ファイル送信が目的なら特に必要なし                                 |
-
----
-
-もし今後、たとえば Bluetooth スピーカーや HID（キーボード）などと接続する際に `connect` が失敗する場合は、また状況を教えてもらえれば診断できます。それぞれ違う要因が絡むので。
-
-Bluetooth 通信において、「ペアリング」こそが最も重要なステップであり、connect はあくまで 使用したいプロファイルに応じて必要になったときに行われる動的な処理にすぎません。
-
-🔑 ペアリング（pair, trust）の役割
-操作	目的
-pair	デバイス同士が互いに認証され、安全に通信できる状態を確立
-trust	自動接続やサービスへのアクセスを許可。ユーザ操作なしに使えるようにする
-
-つまり「この端末とは安全に通信していいよ」とお互いが確認し合うステップ。
-
-これが成功していれば、必要なときに必要なプロファイルだけが接続されるという流れになります。
-
-###
+この`A2DP`というのは要するに、スピーカーやヘッドフォンのような機器に高品質にオーディオデータを送信するためのプロトコルであって、それ以外の対応していない機器に対しては無効になるので`connect`が失敗したということでした。Bluetooth通信においては、ペアリング`pair`こそが最も重要なステップであり、その後の`connect`は、使用するプロファイルに応じて、必要になったときに動的に処理されるものになります。ファイル転送のためなら、そのための接続能力だけあれば十分だということです。
 
 ```bash
 pacman -S gnome-bluetooth-3.0
-bluetooth-sendto --device=XX:XX:... file.png	# it works
+bluetooth-sendto --device=XX:XX:XX:XX:XX:XX some_file.png
 ```
-
-### GPU acceleration on chromium
-Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。\
-[Hardware video acceleration - ArchWiki](https://wiki.archlinux.org/title/Hardware_video_acceleration)
-> Intel graphics open-source drivers support VA-API:\
-> HD Graphics series starting from Broadwell (2014) and newer (e.g. Intel Arc) are supported by intel-media-driver.
-```
-pacman -S intel-media-driver
-echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags.conf
-```
-これでchromiumが特定のファイルの動画再生にGPUを使うようになります。ただしyoutubeの動画で有効にするためにはもう一つ必要なものがあります。「特定のファイル」と書いたところがポイントで、現在youtubeがデフォルトで選択して送信してくるファイル形式はこれには当てはまりません。そのファイル形式をを常に`H.264`に指定するために[h264ify](https://chromewebstore.google.com/detail/h264ify/aleakchihdccplidncghkekgioiakgal)という拡張機能をダウンロードします。正しく動作しているかの確認は`chrome://media-internals`や`/sys/class/drm/card1/gt_cur_freq_mhz`などを見るか、あるいは`htop`を使ってCPUとGPUとを同時に見比べてもいいでしょう。。
-
-### Android file transfer
-```
-pacman -S gvfs-mtp
-android file transfer
-lsusb to check Bus xxx Device yyy
-gio mount mtp://[usb:xxx,yyy]/
-access via /run/user/$UID/gvfs/...
-```
-### Console font
-```
-echo FONT=LatGrkCyr-12x22 >> /etc/vconsole.conf
-echo KEYMAP=jp106 >> /etc/vconsole.conf
-```
+このコマンドが使用するのが`OBEX（OBject EXchange）`というプロトコルで、必要なときに自動でAndroidとのセッションが張られます。これだけで簡単にファイル転送成功できました。ただし、このパッケージは`gtk4`を引き連れてきてしまうのがちょっといやらしい。TUIで使用できる`bluetuith`というのが同機能を提供していてシンプルでよさそうで、そのうちcoreレポジトリに入ってくれるのを期待しています。
