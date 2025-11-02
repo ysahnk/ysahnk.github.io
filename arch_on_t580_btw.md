@@ -8,6 +8,7 @@
 |GPU|Intel UHD Graphics 620 / Gen9.5|
 |SSD|M.2 SSD / PCIe NVMe, PCIe 3.0 x 2, 16Gb/s|
 
+***
 ### Thunderbolt firmware problem
 > [!IMPORTANT]
 > T580を含む、この世代のThinkpadにはファームウェアに関しての致命的な問題が存在します。
@@ -53,14 +54,17 @@ fwupdか、archのカーネルか、わたしのハードウェアか、どこ�
    - `DEVICE-ID`は`fwupdmgr get-devices`で確認できる`4214d8e87e1aa7de57c19e5954bbef2e462b86a4`のような文字列。
    - このコマンドで出てくるプロンプトに従って、まず`14->18`、その後`18->20`と段階的にやると、無事バージョン20まで到達することができました。
 
-一応書いておくと、実際にmintをハードドライブにまでインストールする必要はなく、インストールメディアから`fwupd`を使用してすべての操作を完了できます。
+一応補足しておくと、実際にmintをハードドライブにまでインストールする必要はなく、インストールメディアから`fwupd`を使用してすべての操作を完了できます。
 
+***
 ### Yellowish tint monitor
 
-この機種を含んだいくつかのThinkpadのモニターの色味が黄色がかっている、という評判がネット上で見られます。わたしの経験から言わせてもらうと、これは本当です。特にT580以前に使用していたラップトップが青味の強いモニターだったので、最初のうちはその落差でかなり黄色く見えていました。ただし、使用しているうちに一ヶ月もしないで慣れてきて普通に見えるようになります。逆に言うと、普通もしくは青味のモニターと一緒に横に並べて使用する場合には、もしかするとずっと違和感が残り続けることになるかもしれません。単独で使用するだけならほとんど問題はないことをわたしが［誰？］保証します。
+この機種を含んだいくつかのThinkpadのモニターの色味が黄色がかっている、という評判がネット上で見られます。わたしの経験から言わせてもらうと、これは本当です。特にT580以前に使用していたラップトップが青味の強いモニターだったので、最初のうちはその落差でかなり黄色く見えていました。ただし、使用しているうちに一ヶ月もしないで慣れてきて普通に見えるようになります。逆に言うと、普通もしくは青味のモニターと一緒に横に並べて使用する場合には、もしかするとずっと違和感が残り続けることになるかもしれません。単独で使用するだけならほとんど問題はないことをわたし［誰？］が保証します。
 
+***
 ### GPU acceleration on chromium
-Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。\
+Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。
+
 [Hardware video acceleration - ArchWiki](https://wiki.archlinux.org/title/Hardware_video_acceleration)
 > Intel graphics open-source drivers support VA-API:\
 > HD Graphics series starting from Broadwell (2014) and newer (e.g. Intel Arc) are supported by intel-media-driver.
@@ -68,8 +72,11 @@ Core-i5のモデルを使用していたとしても（そして試してはい�
 pacman -S intel-media-driver
 echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags.conf
 ```
-これでchromiumが特定のファイルの動画再生にGPUを使うようになります。ただしyoutubeの動画で有効にするためにはもう一つ必要なものがあります。「特定のファイル」と書いたところがポイントで、現在youtubeがデフォルトで選択して送信してくるファイル形式はこれには当てはまりません。そのファイル形式をを常に`H.264`に指定するために[h264ify](https://chromewebstore.google.com/detail/h264ify/aleakchihdccplidncghkekgioiakgal)という拡張機能をダウンロードします。正しく動作しているかの確認は`chrome://media-internals`や`/sys/class/drm/card1/gt_cur_freq_mhz`などを見るか、あるいは`htop`を使ってCPUとGPUとを同時に見比べてもいいでしょう。`htop`には実はデフォルトでは隠れているGPUのモニターがあって`F2`の設定から表示することができます
+これでchromiumが特定のファイルの動画再生にGPUを使うようになります。ただしyoutubeの動画で有効にするためにはもう一つ必要なものがあります。「特定のファイル」と書いたところがポイントで、現在youtubeがデフォルトで選択して送信してくるファイル形式はこれには当てはまりません。そのファイル形式をを常に`H.264`に指定するために[h264ify](https://chromewebstore.google.com/detail/h264ify/aleakchihdccplidncghkekgioiakgal)という拡張機能をダウンロードします。
 
+正しく動作しているかの確認は`chrome://media-internals`や`watch -n 1 cat /sys/class/drm/card1/gt_cur_freq_mhz`などを見るか、あるいは`htop`を使ってCPUとGPUとを同時に見比べてもいいでしょう。`htop`には実はデフォルトでは隠れているGPUのモニターがあって`F2`の設定から選択して表示することができます。
+
+***
 ### Android file transfer via usb-c
 ```
 pacman -S gvfs-mtp
@@ -77,11 +84,30 @@ pacman -S gvfs-mtp
 gio mount mtp://[usb:xxx,yyy]/
 # access via /run/user/$UID/gvfs/...
 ```
+
+```
+# libmtp package に含まれるツールのみでも可能？ 未検証
+pacman -S libmtp
+
+mtp-detect
+mtp-connect
+# search for the target file ID
+mtp-folders
+mtp-files
+
+mtp-getfile <ファイルID> <PC上の保存ファイル名>
+mtp-sendfile <PC上のファイル名> <デバイス上の保存先パス>
+```
+
+***
 ### Console font
+黒いコンソール画面で、デフォルトのままだとフォントのサイズが小さすぎると感じるはずです。これへの対処は、たとえば`pacman -S terminus-font`として大きめのビットマップ・フォントを導入してもいいのですが、実は`/usr/share/kbd/consolefonts/`にデフォルトでインストールされているなかに、使用に耐えるサイズのフォントが（ほぼ唯一これだけ）入っています。
 ```
 echo FONT=LatGrkCyr-12x22 >> /etc/vconsole.conf
 echo KEYMAP=jp106 >> /etc/vconsole.conf
 ```
+
+***
 ### Bluetooth 01 (unknown log message)
 ディスプレイマネージャーを使用していないので、電源を入れてブート後にまずはコンソールに着地するのですが、その画面でほぼ毎回必ず以下のようなメッセージが割り込むような形で出力されるのが気になっていました。
 ```
@@ -110,8 +136,9 @@ ChatGPTさんに訊ねてみました。
 
 気味が悪いですが問題はないようです。ちなみにこれはbluetooth系のパッケージを導入する以前から発生していました。それをインストールしたら直ったというようなこともありませんでした。
 
+***
 ### Bluetooth 02 (file transfar)
-アンドロイド端末へのファイル転送を試みました。まず基本的な接続を確認するために以下のようにしました。
+アンドロイド端末へのbluetoothによるファイル転送を試みました。まず基本的な接続を確認するために以下のようにしました。
 
 ```bash
 pacman -S bluez bluez-utils
@@ -133,7 +160,7 @@ bluetoothd[7010]: src/service.c:btd_service_connect() a2dp-source profile connec
 bluetoothd[7010]: [:1.50:error] < org.bluez.Error.Failed [#31]
 ```
 
-`pair`と`trust`まではいいのだが`connect`が失敗する、という状態になりました。再びChatGPTさんに訊ねてみたところ、特に問題はないことがわかりました。
+`pair`と`trust`まではいいのだが`connect`が失敗する、という状態になりました。再びChatGPTさんに訊ねてみたところ、結論としては、特に問題はないことがわかりました。
 
 > `a2dp-source` = BlueZ 側がオーディオを送り出す側（スピーカーなど）として振る舞おうとしている\
 > しかし Android 側はスピーカーではない（むしろオーディオソース）\
@@ -143,10 +170,10 @@ bluetoothd[7010]: [:1.50:error] < org.bluez.Error.Failed [#31]
 > その中に **Android 側が非対応なプロファイル（例: a2dp-source）** があると、それが失敗して全体が「connect failed」に見える\
 > でも実際は「一部のプロファイルが使えなかっただけ」
 
-この`A2DP`というのは要するに、スピーカーやヘッドフォンのような機器に高品質にオーディオデータを送信するためのプロトコルであって、それ以外の対応していない機器に対しては無効になるので`connect`が失敗したということでした。Bluetooth通信においては、ペアリング`pair`こそが最も重要なステップであり、その後の`connect`は、使用するプロファイルに応じて、必要になったときに動的に処理されるものになります。ファイル転送のためなら、そのための接続能力だけあれば十分だということです。
+この`A2DP`というのは要するに、スピーカーやヘッドフォンのような機器に高品質にオーディオデータを送信するためのプロトコルであって、それ以外の対応していない機器に対しては無効になるので`connect`が失敗した、ということでした。bluetooth通信においては、ペアリング`pair`こそが重要なステップであり、その後の`connect`は、使用するプロファイルに応じて、必要になったときに動的に処理されるものになるそうです。ファイル転送のためなら、そのための接続能力さえあれば、それで十分だということです。
 
 ```bash
 pacman -S gnome-bluetooth-3.0
 bluetooth-sendto --device=XX:XX:XX:XX:XX:XX some_file.png
 ```
-このコマンドが使用するのが`OBEX（OBject EXchange）`というプロトコルで、必要なときに自動でAndroidとのセッションが張られます。これだけで簡単にファイル転送成功できました。ただし、このパッケージは`gtk4`を引き連れてきてしまうのがちょっといやらしい。TUIで使用できる`bluetuith`というのが同機能を提供していてシンプルでよさそうで、そのうちcoreレポジトリに入ってくれるのを期待しています。
+このコマンドが使用するのが`OBEX（OBject EXchange）`というプロトコルで、必要なときに自動でAndroidとのセッションが張られます。これだけで簡単にファイル転送成功できました。ただし、このパッケージは`gtk4`を引き連れてきてしまうのがちょっといやらしい。TUIで使用できる`bluetuith`というのが同じ機能を提供していてシンプルでよさそうで、そのうちcoreレポジトリに入ってくれるのを期待しています。
