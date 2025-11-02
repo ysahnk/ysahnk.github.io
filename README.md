@@ -1,4 +1,4 @@
-<div><a href="">
+<div><a href="./twittetiquette">
 <img src="/images/homura_400x400_round.png" alt="twitter icon image" width="100" height="100" />
 </a></div>
 
