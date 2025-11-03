@@ -1,6 +1,7 @@
 <img src="/images/hikari_256x256_round.jpg" alt="penguin icon image" width="100" height="100" />
 
 ### I use arch on T580, btw
+
 |   |                   |
 |---|-------------------|
 |MEM|DDR4-2400 PC4-19200|
@@ -10,8 +11,8 @@
 
 ***
 ### Thunderbolt firmware problem
-> [!IMPORTANT]
-> T580を含む、この世代のThinkpadにはファームウェアに関しての致命的な問題が存在します。
+
+T580を含む、この世代のThinkpadには**ファームウェアに関しての致命的な問題**が存在します。
 
 [The "Thunderbolt Firmware Problem" Explained (reddit.com)](https://www.reddit.com/r/thinkpad/comments/1dfdp18/the_thunderbolt_firmware_problem_explained/)
 
@@ -63,11 +64,14 @@ fwupdか、archのカーネルか、わたしのハードウェアか、どこ�
 
 ***
 ### GPU acceleration on chromium
+
 Core-i5のモデルを使用していたとしても（そして試してはいませんがまず間違いなくCore-i3でも）、youtubeの1080p全画面再生程度では全然普通に余裕があります。とは言え、内蔵GPUを使って更にCPUに余裕を持たせられればそれはそれで嬉しいものです。発熱抑制にもなります。
 
 [Hardware video acceleration - ArchWiki](https://wiki.archlinux.org/title/Hardware_video_acceleration)
+
 > Intel graphics open-source drivers support VA-API:\
 > HD Graphics series starting from Broadwell (2014) and newer (e.g. Intel Arc) are supported by intel-media-driver.
+
 ```
 pacman -S intel-media-driver
 echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags.conf
@@ -78,6 +82,7 @@ echo "--enable-features=AcceleratedVideoDecodeLinuxGL" >> .config/chromium-flags
 
 ***
 ### Android file transfer via usb-c
+
 ```
 pacman -S gvfs-mtp
 # lsusb to check Bus xxx Device yyy
@@ -101,6 +106,7 @@ mtp-sendfile <PC上のファイル名> <デバイス上の保存先パス>
 
 ***
 ### Console font
+
 黒いコンソール画面で、デフォルトのままだとフォントのサイズが小さすぎると感じるはずです。これへの対処は、たとえば`pacman -S terminus-font`として大きめのビットマップ・フォントを導入してもいいのですが、実は`/usr/share/kbd/consolefonts/`にデフォルトでインストールされているなかに、使用に耐えるサイズのフォントが（ほぼ唯一これだけ）入っています。
 ```
 echo FONT=LatGrkCyr-12x22 >> /etc/vconsole.conf
@@ -109,6 +115,7 @@ echo KEYMAP=jp106 >> /etc/vconsole.conf
 
 ***
 ### Bluetooth 01 (unknown log message)
+
 ディスプレイマネージャーを使用していないので、電源を入れてブート後にまずはコンソールに着地するのですが、その画面でほぼ毎回必ず以下のようなメッセージが割り込むような形で出力されるのが気になっていました。
 ```
 Bluetooth: hci0: Reading supported features failed (-16)
@@ -138,6 +145,7 @@ ChatGPTさんに訊ねてみました。
 
 ***
 ### Bluetooth 02 (file transfar)
+
 アンドロイド端末へのbluetoothによるファイル転送を試みました。まず基本的な接続を確認するために以下のようにしました。
 
 ```bash
