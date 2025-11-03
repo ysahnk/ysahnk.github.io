@@ -1,4 +1,4 @@
-<img src="/images/iconhikari02.jpg" alt="penguin icon image" width="100" height="100" />
+<img src="/images/hikari_256x256_round.jpg" alt="penguin icon image" width="100" height="100" />
 
 ### I use arch on T580, btw
 |   |                   |

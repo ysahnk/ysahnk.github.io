@@ -1,7 +1,8 @@
-<img src="/images/yoro_bot_400x400.png" alt="yoro_bot icon image" width="100" height="100" />
+<img src="/images/yoro_bot_400x400_round.png" alt="yoro_bot icon image" width="100" height="100" />
 
 ### 更新履歴
 
+- 2025/10/27 ー 重複する過去ツイートの肥大化防止機能を実装
 - 2025/06/27 ー 『日本人の身体観の歴史』からの引用をツイートデータベースに追加
 - 2025/06/05 ー wikipediaリプライ機能を実装
 - 2025/01/09 ー botのつくり方を追記
