@@ -2,6 +2,8 @@
 
 ### 更新履歴
 
+- 2025/12/15 ー シート構造の最適化とそれに伴うコードの見直し
+- 2025/12/14 ー テキストを全面的に読み直し、引用の修正及び追加を行いました
 - 2025/10/27 ー 重複する過去ツイートの肥大化防止機能を実装
 - 2025/06/27 ー 『日本人の身体観の歴史』からの引用をツイートデータベースに追加
 - 2025/06/05 ー wikipediaリプライ機能を実装
@@ -49,11 +51,13 @@
 ### botのつくり方
 
 1. Googleスプレッドシートを作成する。
-   - A列：140文字以内のツイート本文
-   - B列：ツイート回数の記録、初期値はゼロ
-   - C列：1から通し番号を振る
-   - D列：LEN(A#)、D1に`=LEN(A1)`と入力してからD列を全選択して`Ctrl + Enter`
-   - E列（任意）：空でない場合、A列のツイートへのリプライとしてぶら下がる文字列
+   - A列：本文文字数カウンター。A1に`=LEN(B1)`と入力してからA列を全選択して`Ctrl + Enter`
+   - B列：140文字以内のツイート本文
+   - C列：ツイート回数の記録。初期値は半角ゼロ`0`
+   - D列：シリアルナンバー。半角`1`から順に番号を振る
+   - E列（任意）：空でない場合、B列のツイートへのリプライとしてぶら下がる文字列
+   - F列：B列ツイートのIDを管理用に保存する。初期値は半角コロン`:`
+   - G列：E列ツイートのIDを管理用に保存する。初期値は半角コロン`:`
 2. 「拡張機能」からAppsScriptを作成する。
    - 「ライブラリを追加」からOAuth2ライブラリを追加
      - 1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF
@@ -63,7 +67,7 @@
      - https://script.google.com/macros/d/スクリプトID/usercallback
    - 「Keys and tokens」から「Client ID」と「Client Secret」を保存する。
 4. AppsScriptの「エディタ」に以下の`コード.gs`をコピーして貼り付ける。
-5. 「プロジェクトの設定」の「スクリプトプロパティを追加」から、保存した値を設定する。
+5. 「プロジェクトの設定」の「スクリプトプロパティを追加」から、上で保存した値を設定する。
    - CLIENT_ID
    - CLIENT_SECRET
 6. 「エディタ」から`initialSetUp()`関数を選択し「実行」する。
@@ -155,6 +159,39 @@ function getService() {
     })
 }
 
+function deleteTweet(tweetID) {
+  const service = getService();
+  if (!service.hasAccess()) {
+    Logger.log('No access authorization. Rerun initialSetUp().');
+    return;
+  }
+
+  const url = `https://api.twitter.com/2/tweets/${tweetID}`;
+  const response = UrlFetchApp.fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: 'Bearer ' + service.getAccessToken()
+    },
+    muteHttpExceptions: true
+  });
+
+  const result = JSON.parse(response.getContentText());
+  Logger.log(JSON.stringify(result, null, 2));
+
+  if (response.getResponseCode() === 200
+      && result.data
+      && result.data.deleted === true) {
+    return;
+  }
+
+  // ERROR DETECTED
+  MailApp.sendEmail(
+    Session.getEffectiveUser().getEmail(),
+    'GAS: An error may have occurred.',
+    `Failed to delete tweet: https://x.com/Yoro_bot/status/${tweetID}`
+  );
+}
+
 function sendTweet(tweetText, targetID) {
   const service = getService();
   if (!service.hasAccess()) {
@@ -172,10 +209,10 @@ function sendTweet(tweetText, targetID) {
   const url = 'https://api.twitter.com/2/tweets';
   const response = UrlFetchApp.fetch(url, {
     method: 'POST',
-    contentType: 'application/json',
     headers: {
-      Authorization: 'Bearer ' + service.getAccessToken()
-    },  
+      Authorization: 'Bearer ' + service.getAccessToken(),
+      'Content-Type': 'application/json'
+    },
     muteHttpExceptions: true,
     payload: JSON.stringify(payload)
   });
@@ -188,73 +225,78 @@ function sendTweet(tweetText, targetID) {
 function sendRandomTweet() {
   // trigger fires every 30min (48/day)
   if (!drawLots(36)) return;
-
-  // [A:text, B:count, C:number, D:len(text), E:url(optional)]
+  
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange('A1:E');
-
-  // generate random index [0, (LastRow - 1)]
-  const i = Math.floor(Math.random() * sheet.getLastRow());
-
-  // get (i + 1)th row in range
-  const selectedRow = range.getValues()[i];
-  const nextCount = selectedRow[1] + 1;
-  sheet.getRange('B' + (i + 1)).setValue(nextCount);
-
-  const targetID = sendTweet(selectedRow[0], null);
-  if (selectedRow[4]) {
-    Utilities.sleep(10000);
-    sendTweet(selectedRow[4], targetID);
-  }
+  
+  const rowNum = 1 + Math.floor(Math.random() * sheet.getLastRow());
+  handleTweetSequence(sheet.getRange(rowNum, 2, 1, 6));
 }
 
 function sendRareTweet() {
   // trigger fires every 30min (48/day)
-  if (!drawLots(48 * 3)) return;
+  if (!drawLots(48)) return;
 
-  // [A:text, B:count, C:number, D:len(text), E:url(optional)]
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange('A1:E');
-  const rows = range.getValues();
 
-  const minCount = rows.sort((x, y) => x[1] - y[1]).at(0)[1];
-  const minRows = rows.filter((row) => row[1] == minCount);
-  const selectedRow = minRows[Math.floor(Math.random() * minRows.length)];
+  const rows = sheet.getRange('C1:D').getValues();
+  const minCount = rows.sort((x, y) => x[0] - y[0]).at(0)[0];
+  const minRows = rows.filter((row) => row[0] === minCount);
 
-  const num = selectedRow[2];
-  const nextCount = selectedRow[1] + 1;
-  sheet.getRange('B' + num).setValue(nextCount);
+  const rowNum = minRows.at(Math.floor(Math.random() * minRows.length))[1];
+  handleTweetSequence(sheet.getRange(rowNum, 2, 1, 6));
+}
 
-  const targetID = sendTweet(selectedRow[0], null);
-  if (selectedRow[4]) {
-    Utilities.sleep(10000);
-    sendTweet(selectedRow[4], targetID);
+// passed range       [A:len(text),
+// starts from B --->  B:text,  C:count,  D:number,
+//                     E:url(optional),  F:id_text,  G:id_url(optional)]
+
+function handleTweetSequence(range) {
+  // range.getValues() returns 2-D array
+  const selectedRow = range.getValues()[0];
+
+  // E:E   ->  E:X   Empty:New
+  // E:X   ->  X:Y   Right:New
+  // X:Y   ->  Y:Z   Right:New
+
+  // main text tweet
+  const [idTextLeft, idTextRight] = selectedRow[4].split(':');
+  if (idTextLeft) {
+    deleteTweet(idTextLeft);
   }
+  const idTextNew = sendTweet(selectedRow[0], null);
+  selectedRow[4] = `${idTextRight}:${idTextNew}`;
+
+  // optional url tweet
+  if (selectedRow[3]) {
+    const [idUrlLeft, idUrlRight] = selectedRow[5].split(':');
+    if (idUrlLeft) {
+      deleteTweet(idUrlLeft);
+    }
+    Utilities.sleep(3000);
+    selectedRow[5] = `${idUrlRight}:${sendTweet(selectedRow[3], idTextNew)}`;
+  }
+
+  selectedRow[1]++;
+  range.setValues([selectedRow]);
 }
 
 function drawLots(num) {
-  // true if 0, false otherwise, p=1/num
-  return (Math.floor(Math.random() * num)) == 0;
+  // p=1/num
+  return (Math.floor(Math.random() * num)) === 0;
 }
 
 function sendNewYearTweet() {
-  const today = new Date();
-  if (today.getMonth() != 0) return;
+  if (new Date().getMonth() !== 0) return;
+  Logger.log('HAPPY NEW YEAR!');
 
-  // Happy New Year!
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const range = sheet.getRange('A1:D');
 
-  const numlist = [29, 602];
+  const numlist = [64, 65, 67, 884, 885, 887];
   for (const num of numlist) {
-    // num starts from 1, arrayindex from 0
-    const selectedRow = range.getValues()[num - 1];
-    const nextCount = selectedRow[1] + 1;
-    sheet.getRange('B' + num).setValue(nextCount);
-
-    sendTweet(selectedRow[0], null);
-    if (num == numlist.at(-1)) break;
-    Utilities.sleep(10000);
+    handleTweetSequence(sheet.getRange(num, 2, 1, 6));
+    if (num !== numlist.at(-1)) {
+      Utilities.sleep(3000);
+    }
   }
 }
 ```
