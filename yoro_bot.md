@@ -3,7 +3,6 @@
 ### 更新履歴
 
 - 2025/12/15 ー シート構造の最適化とそれに伴うコードの見直し
-- 2025/12/14 ー テキストを全面的に読み直し、引用の修正及び追加を行いました
 - 2025/10/27 ー 重複する過去ツイートの肥大化防止機能を実装
 - 2025/06/27 ー 『日本人の身体観の歴史』からの引用をツイートデータベースに追加
 - 2025/06/05 ー wikipediaリプライ機能を実装
@@ -291,7 +290,7 @@ function sendNewYearTweet() {
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-  const numlist = [64, 65, 67, 884, 885, 887];
+  const numlist = [64, 65, 67, 884, 885];
   for (const num of numlist) {
     handleTweetSequence(sheet.getRange(num, 2, 1, 6));
     if (num !== numlist.at(-1)) {
