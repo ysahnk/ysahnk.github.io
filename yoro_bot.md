@@ -1,7 +1,8 @@
 <img src="/images/yoro_bot_400x400_round.png" alt="yoro_bot icon image" width="100" height="100" />
 
 ### 更新履歴
-
+- 2026/01/14 ー アカウントを非公開（鍵付き）に移行しました、フォローリクエストはお気軽に
+- 2026/01/04 ー 引用書籍の読み直しと、それに伴うツイートデータベースの追加、修正を完了しました
 - 2025/12/15 ー シート構造の最適化とそれに伴うコードの見直し
 - 2025/10/27 ー 重複する過去ツイートの肥大化防止機能を実装
 - 2025/06/27 ー 『日本人の身体観の歴史』からの引用をツイートデータベースに追加
@@ -223,7 +224,7 @@ function sendTweet(tweetText, targetID) {
 
 function sendRandomTweet() {
   // trigger fires every 30min (48/day)
-  if (!drawLots(36)) return;
+  if (!drawLots(48)) return;
   
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   
@@ -233,7 +234,7 @@ function sendRandomTweet() {
 
 function sendRareTweet() {
   // trigger fires every 30min (48/day)
-  if (!drawLots(48)) return;
+  if (!drawLots(24)) return;
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
