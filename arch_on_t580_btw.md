@@ -90,20 +90,39 @@ pacman -S gvfs-mtp
 # lsusb to check Bus xxx Device yyy
 gio mount mtp://[usb:xxx,yyy]/
 # access via /run/user/$UID/gvfs/...
-```
 
-```
 # libmtp package に含まれるツールのみでも可能？ 未検証
 pacman -S libmtp
-
+```
+```
+# 検証してみました: ibmtp version: 1.1.23
 mtp-detect
 mtp-connect
-# search for the target file ID
-mtp-folders
-mtp-files
+mtp-filetree   # grep fileID, and then...
+mtp-getfile [<deviceid> | SN:<serialnumber>] <fileid/trackid> <filename>
+mtp-sendfile <local filename> <remote filename>
 
-mtp-getfile <ファイルID> <PC上の保存ファイル名>
-mtp-sendfile <PC上のファイル名> <デバイス上の保存先パス>
+# 結論
+gvfs-mtp   ：手順が面倒くさいかも。スクリプト化すればthunarと併せて使えるかも
+libmtp     ：フォルダ単位の送受信ができないのが惜しい
+gmtp       ：公式repoにあるlibmtpのフロントエンド。最低限のシンプルで合格点
+```
+```
+# こんなかんじでいけそう
+mount_android() {
+    echo "be sure to turn on file transfer mode before proceeding"
+    echo -n ">>>"
+    read
+    ADDR=$(lsusb | grep -i android | awk '{ printf "mtp://[usb:%s,%s]/", $2, substr($4, 1, 3)}')
+    if [[ -n "$ADDR" ]]; then
+        echo "gio-mounting Android device..."
+        gio mount "$ADDR"
+        echo "now you can access via under /run/user/\$UID/gvfs/..."
+        echo "unmount: gio mount -s mtp "
+    else
+        echo "no device detected"
+    fi
+}
 ```
 
 ***
